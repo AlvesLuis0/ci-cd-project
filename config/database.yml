@@ -18,6 +18,10 @@ default: &default
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("DATABASE_HOST") { "localhost" } %>
+  port: <%= ENV.fetch("DATABASE_PORT") { 5432 } %>
+  username: <%= ENV.fetch("DATABASE_USERNAME") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD") %>
 
 
 development:
@@ -82,8 +86,6 @@ production:
   primary: &primary_production
     <<: *default
     database: ci_cd_project_production
-    username: ci_cd_project
-    password: <%= ENV["CI_CD_PROJECT_DATABASE_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: ci_cd_project_production_cache
