@@ -1,0 +1,10 @@
+valid:
+  reference: <%= rand(9999999999) %>
+  name: Reference 01
+  description: Some description
+  price: 199.90
+
+invalid:
+  reference: ""
+  name: ""
+  price: -50
