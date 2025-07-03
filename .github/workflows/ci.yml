@@ -65,7 +65,6 @@ jobs:
         env:
           RAILS_ENV: test
           RUN_DB_SETUP: true
-          DATABASE_HOST: database
           DATABASE_USERNAME: postgres
           DATABASE_PASSWORD: password
         run: bin/rails db:test:prepare spec
