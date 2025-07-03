@@ -42,13 +42,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: postgres:17.5-alpine3.22
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: password
         ports:
-          - 5432:5432
-        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+          - "5432:5432"
 
     steps:
       - name: Install packages
@@ -66,7 +64,9 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          DATABASE_HOST: database
+          DATABASE_USERNAME: postgres
+          DATABASE_PASSWORD: password
         run: bin/rails db:test:prepare spec
 
       - name: Keep screenshots from failed system tests
