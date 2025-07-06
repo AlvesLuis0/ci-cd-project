@@ -11,28 +11,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup SSH Keys
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          
+          # adiciona chave do host remoto
+          ssh-keyscan -p 22 ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+        shell: bash
 
-      - name: Deploy
+      - name: Deploy via SSH
         run: |
-          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa \
+          ssh -tt -i ~/.ssh/id_rsa \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
               set -e
-
+          
+              # configurar DNS (se precisar)
+              echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" | sudo tee /etc/resolv.conf
+          
               # instalar Docker e Compose
               sudo yum update -y
               sudo amazon-linux-extras install docker -y
               sudo service docker start
               sudo usermod -a -G docker $USER
-              sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')/docker-compose-$(uname -s)-$(uname -m)" \
+                -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
-
-              # clonar ou atualizar app
+          
+              # clonar ou atualizar aplicação
               cd ~
               if [ -d app ]; then
                 cd app
@@ -42,8 +52,9 @@ jobs:
                 git clone git@github.com:${{ github.repository }} app
                 cd app
               fi
-
-              # rodar containers
+          
+              # redeploy containers
               docker-compose pull || true
               docker-compose up -d --build
             EOF
+        shell: bash
