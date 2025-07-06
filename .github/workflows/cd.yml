@@ -3,8 +3,7 @@ name: CD
 on:
   workflow_run:
     workflows: ["CI"]
-    types:
-      - completed
+    types: ["completed"]
 
 jobs:
   deploy:
@@ -12,33 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Staging server
-        uses: appleboy/ssh-action@v1
+      - name: Set up Keys
+        uses: kielabokkie/ssh-key-and-known-hosts-action@v1
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # prepara Docker
-            sudo yum update -y
-            sudo amazon-linux-extras install docker -y
-            sudo service docker start
-            sudo usermod -a -G docker $USER
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-host: ${{ secrets.REMOTE_HOST }}
 
-            # instala Docker Compose
-            sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            
-            # clone ou atualiza via Git
-            if [ -d app ]; then
-              cd app
-              git reset --hard
-              git pull origin main
-            else
-              git clone https://github.com/alvesluis0/ci-cd-project app
-              cd app
-            fi
+      - name: Deploy
+        run: |
+          sudo yum update -y
+          sudo amazon-linux-extras install docker -y
+          sudo service docker start
+          sudo usermod -a -G docker $USER
+          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s ...)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
 
-            # sobe containers
-            docker-compose pull || true
-            docker-compose up -d --build
+          # Git clone ou pull
+          if [ -d app ]; then
+            cd app && git reset --hard && git pull origin main
+          else
+            git clone github.com/alvesluis0/${{ github.repository }} app && cd app
+          fi
+
+          docker-compose pull || true
+          docker-compose up -d --build
