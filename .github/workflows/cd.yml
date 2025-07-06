@@ -13,22 +13,32 @@ jobs:
 
     steps:
       - name: Deploy to Staging server
-        uses: easingthemes/ssh-deploy@main
+        uses: appleboy/ssh-action@v1
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          SCRIPT_BEFORE: |
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # prepara Docker
             sudo yum update -y
             sudo amazon-linux-extras install docker -y
             sudo service docker start
             sudo usermod -a -G docker $USER
-            sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')" \
-              -o /usr/local/bin/docker-compose
+
+            # instala Docker Compose
+            sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
-            rm -rf /app
-            clone https://github.com/AlvesLuis0/ci-cd-project ~/app
-          SCRIPT_AFTER: |
-            cd ~/app
+            
+            # clone ou atualiza via Git
+            if [ -d app ]; then
+              cd app
+              git reset --hard
+              git pull origin main
+            else
+              git clone https://github.com/alvesluis0/ci-cd-project app
+              cd app
+            fi
+
+            # sobe containers
             docker-compose pull || true
             docker-compose up -d --build
