@@ -26,7 +26,9 @@ jobs:
             sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')" \
               -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
+            rm -rf /app
+            clone https://github.com/AlvesLuis0/ci-cd-project ~/app
           SCRIPT_AFTER: |
-            cd ~/ci-cd-project
+            cd ~/app
             docker-compose pull || true
             docker-compose up -d --build
