@@ -14,6 +14,6 @@ jobs:
     steps:
       - run: |
           rm -rf app
-          git clone https://github.com/alvesluis0/${{ github.repository }} app
+          git clone https://github.com/${{ github.repository }} app
           cd app
           docker compose up -d
