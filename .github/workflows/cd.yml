@@ -13,7 +13,8 @@ jobs:
 
     steps:
       - run: |
-          rm -rf app
-          git clone https://github.com/${{ github.repository }} app
-          cd app
+          rm -rf ~/app
+          git clone https://github.com/${{ github.repository }} ~/app
+          cd ~/app
+          touch .env
           docker compose up -d
