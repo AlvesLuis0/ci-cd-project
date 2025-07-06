@@ -1,0 +1,19 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  deploy:
+    name: "Deploy"
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: self-hosted
+
+    steps:
+      - run: |
+          rm -rf app
+          git clone https://github.com/alvesluis0/${{ github.repository }} app
+          cd app
+          docker compose up -d
