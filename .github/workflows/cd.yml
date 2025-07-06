@@ -11,27 +11,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set up Keys
-        uses: kielabokkie/ssh-key-and-known-hosts-action@v1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh-host: ${{ secrets.REMOTE_HOST }}
+      - name: Setup SSH Keys
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
       - name: Deploy
         run: |
-          sudo yum update -y
-          sudo amazon-linux-extras install docker -y
-          sudo service docker start
-          sudo usermod -a -G docker $USER
-          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s ...)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+              set -e
 
-          # Git clone ou pull
-          if [ -d app ]; then
-            cd app && git reset --hard && git pull origin main
-          else
-            git clone github.com/alvesluis0/${{ github.repository }} app && cd app
-          fi
+              # instalar Docker e Compose
+              sudo yum update -y
+              sudo amazon-linux-extras install docker -y
+              sudo service docker start
+              sudo usermod -a -G docker $USER
+              sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '(?<=\"tag_name\": \")[^\"]*')/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
 
-          docker-compose pull || true
-          docker-compose up -d --build
+              # clonar ou atualizar app
+              cd ~
+              if [ -d app ]; then
+                cd app
+                git fetch --all
+                git reset --hard origin/main
+              else
+                git clone git@github.com:${{ github.repository }} app
+                cd app
+              fi
+
+              # rodar containers
+              docker-compose pull || true
+              docker-compose up -d --build
+            EOF
